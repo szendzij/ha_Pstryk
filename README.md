@@ -105,7 +105,7 @@ actions:
               entity_id: switch.bojler
             action: switch.turn_off
             data: {}
-
+```
 Rozładowanie magazynu energii - Sprzedaż po najlepszej cenie
 
 ```yaml
