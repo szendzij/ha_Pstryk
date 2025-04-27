@@ -1,4 +1,4 @@
-# Integracja Home Assistant z PSTryk API
+# Integracja Home Assistant z Pstryk API
 
 [![Wersja](https://img.shields.io/badge/wersja-1.2.1-blue)](https://github.com/twoj_nick/pstryk-homeassistant)
 
