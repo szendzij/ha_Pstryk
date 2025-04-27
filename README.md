@@ -35,7 +35,7 @@ logo.png (opcjonalnie)
 ## Konfiguracja
 1. Przejdź do `Ustawienia` → `Urządzenia i usługi`
 2. Kliknij `Dodaj integrację`
-3. Wyszukaj "PSTryk Energy"
+3. Wyszukaj "Psrryk Energy"
 4. Wprowadź dane:
 - **Klucz API**: Twój klucz z platformy PSTryk
 - **Liczba najlepszych cen kupna**: (domyślnie 5)
@@ -52,11 +52,21 @@ logo.png (opcjonalnie)
 | `sensor.pstryk_buy_price_table`      | Tabela cen kupna              |
 | `sensor.pstryk_sell_price_table`     | Tabela cen sprzedaży          |
 
-### Przykładowe użycie w Lovelace
+Przykładowa Automatyzacja:
+
+Włączanie bojlera
+
 ```yaml
-type: entities
-entities:
-- entity: sensor.pstryk_current_buy_price
- name: Aktualna cena kupna
-- entity: sensor.pstryk_buy_price_table
- name: Tabela cen kupna
+automation:
+  - alias: "Optymalne grzanie wody"
+    trigger:
+      platform: time_pattern
+      hours: >
+        {{ state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
+        | map(attribute='start_local') 
+        | map('regex_replace','(..):..','\\1') 
+        | list }}
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.bojler
