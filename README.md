@@ -41,7 +41,11 @@ logo.png (opcjonalnie)
 - **Liczba najlepszych cen kupna**: (domyślnie 5)
 - **Liczba najlepszych cen sprzedaży**: (domyślnie 5)
 
-![Przykładowa konfiguracja](https://via.placeholder.com/600x400?text=Konfiguracja+Integracji)
+##Scrnshoty
+![{0F0FC0BC-1F24-4FB7-9EA6-C7EFC6690423}](https://github.com/user-attachments/assets/9e9e0d7a-5394-4843-92a7-fd692f7d4fbb)
+![{6613F04E-4045-45A8-A28A-7BA1B8B4AD63}](https://github.com/user-attachments/assets/3edc2ad0-cdd1-46b0-aa58-27ea94bfdd26)
+![{C248C3EA-C159-409E-AA40-B9863D7A8311}](https://github.com/user-attachments/assets/48e41d6b-04ae-4f67-b704-7c046646ba11)
+
 
 ## Użycie
 ### Dostępne encje
