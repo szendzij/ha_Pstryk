@@ -41,7 +41,7 @@ logo.png (opcjonalnie)
 - **Liczba najlepszych cen kupna**: (domyślnie 5)
 - **Liczba najlepszych cen sprzedaży**: (domyślnie 5)
 
-##Scrnshoty
+## Scrnshoty
 
 ![{0F0FC0BC-1F24-4FB7-9EA6-C7EFC6690423}](https://github.com/user-attachments/assets/9e9e0d7a-5394-4843-92a7-fd692f7d4fbb)
 ![{6613F04E-4045-45A8-A28A-7BA1B8B4AD63}](https://github.com/user-attachments/assets/3edc2ad0-cdd1-46b0-aa58-27ea94bfdd26)
