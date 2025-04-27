@@ -61,16 +61,44 @@ Przykładowa Automatyzacja:
 Włączanie bojlera
 
 ```yaml
-automation:
-  - alias: "Optymalne grzanie wody"
-    trigger:
-      platform: time_pattern
-      hours: >
-        {{ state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
+alias: Optymalne grzanie wody
+triggers:
+  - minutes: /1
+    trigger: time_pattern
+conditions:
+  - condition: template
+    value_template: >
+      {% set current_time = now().strftime('%H:%M') %} {% set best_times =
+      state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
         | map(attribute='start_local') 
-        | map('regex_replace','(..):..','\\1') 
-        | list }}
-    action:
-      - service: switch.turn_on
-        target:
-          entity_id: switch.bojler
+        | list 
+      %} {{ current_time in best_times }}
+actions:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: switch.bojler
+            state: "off"
+        sequence:
+          - target:
+              entity_id: switch.bojler
+            action: switch.turn_on
+            data: {}
+          - data:
+              message: >
+                Grzanie włączone! Godzina: {{ current_time }}, Cena: {{
+                state_attr('sensor.pstryk_buy_price_table', 'best_prices')  |
+                selectattr('start_local', 'equalto', current_time)  |
+                map(attribute='price') | first }} PLN
+            action: notify.mobile_app
+      - conditions:
+          - condition: state
+            entity_id: switch.bojler
+            state: "on"
+        sequence:
+          - delay: "01:00:00"
+          - target:
+              entity_id: switch.bojler
+            action: switch.turn_off
+            data: {}
+
