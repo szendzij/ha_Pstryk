@@ -66,45 +66,53 @@ Włączanie bojlera
 
 ```yaml
 alias: Optymalne grzanie wody
-triggers:
-  - minutes: /1
-    trigger: time_pattern
-conditions:
+description: Automatyzacja włączająca grzanie w najtańszych godzinach
+trigger:
+  - platform: time_pattern
+    minutes: "/1"  # Sprawdzaj co minutę
+
+condition:
   - condition: template
     value_template: >
-      {% set current_time = now().strftime('%H:%M') %} {% set best_times =
-      state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
-        | map(attribute='start_local') 
+      {% set current_time = now().strftime('%H:%M') %}
+      {% set best_hours = state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
+        | map(attribute='start') 
+        | map('regex_replace', '.* (\d+:\d+):\d+', '\1')  # Wyciągamy samą godzinę (HH:MM)
         | list 
-      %} {{ current_time in best_times }}
-actions:
+      %}
+      {{ current_time in best_hours }}
+
+action:
   - choose:
       - conditions:
           - condition: state
             entity_id: switch.bojler
             state: "off"
         sequence:
-          - target:
+          - service: switch.turn_on
+            target:
               entity_id: switch.bojler
-            action: switch.turn_on
-            data: {}
-          - data:
+          - service: notify.mobile_app
+            data:
               message: >
-                Grzanie włączone! Godzina: {{ current_time }}, Cena: {{
-                state_attr('sensor.pstryk_buy_price_table', 'best_prices')  |
-                selectattr('start_local', 'equalto', current_time)  |
-                map(attribute='price') | first }} PLN
-            action: notify.mobile_app
+                🟢 Grzanie WŁĄCZONE! 
+                Godzina: {{ current_time }}, 
+                Cena: {{ state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
+                  | selectattr('start', 'match', '.* ' + current_time + ':\d+') 
+                  | map(attribute='price') 
+                  | first | round(2) }} PLN/kWh
+
       - conditions:
           - condition: state
             entity_id: switch.bojler
             state: "on"
         sequence:
-          - delay: "01:00:00"
-          - target:
+          - delay: "01:00:00"  # Wyłącz po 1 godzinie
+          - service: switch.turn_off
+            target:
               entity_id: switch.bojler
-            action: switch.turn_off
-            data: {}
+
+mode: single
 ```
 Rozładowanie magazynu energii - Sprzedaż po najlepszej cenie
 
