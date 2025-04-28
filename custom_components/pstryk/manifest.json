@@ -3,10 +3,11 @@
   "name": "Pstryk Energy",
   "version": "1.2.0",
   "codeowners": ["https://github.com/balgerion"],
-  "requirements": ["aiohttp"],
+  "requirements": ["aiohttp>=3.7"],
   "iot_class": "cloud_polling",
   "config_flow": true,
   "documentation": "https://github.com/balgerion/ha_Pstryk",
   "issue_tracker": "https://github.com/balgerion/ha_Pstryk/issues",
+  "platforms": ["sensor"],
   "logo": "logo.png"
 }
