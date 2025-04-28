@@ -63,57 +63,64 @@ logo.png (opcjonalnie)
 Przykładowa Automatyzacja:
 
 Włączanie bojlera
+[Uploading update_coordinator.py…]()![IMG_4079](https://github.com/user-attachments/assets/ccdfd05c-3b38-4af5-a8db-36fe7fd645ee)
 
 ```yaml
 alias: Optymalne grzanie wody
-description: Automatyzacja włączająca grzanie w najtańszych godzinach
-trigger:
-  - platform: time_pattern
-    minutes: "/1"  # Sprawdzaj co minutę
-
-condition:
+description: ""
+triggers:
+  - minutes: "1"
+    trigger: time_pattern
+    hours: /1
+conditions:
   - condition: template
     value_template: >
-      {% set current_time = now().strftime('%H:%M') %}
-      {% set best_hours = state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
-        | map(attribute='start') 
-        | map('regex_replace', '.* (\d+:\d+):\d+', '\1')  # Wyciągamy samą godzinę (HH:MM)
-        | list 
-      %}
-      {{ current_time in best_hours }}
+      {% set current_hour = now().replace(minute=0, second=0,
+      microsecond=0).isoformat(timespec='seconds').split('+')[0] %}
 
-action:
+      {% set best_hours = state_attr('sensor.pstryk_buy_price_table',
+      'best_prices') | map(attribute='start') | list %}
+
+      {{ current_hour in best_hours }}
+actions:
+  - variables:
+      current_hour: >-
+        {{ now().replace(minute=0, second=0,
+        microsecond=0).isoformat(timespec='seconds').split('+')[0] }}
   - choose:
       - conditions:
           - condition: state
-            entity_id: switch.bojler
+            entity_id: light.shellypro3_34987a49142c_switch_2
             state: "off"
         sequence:
-          - service: switch.turn_on
-            target:
-              entity_id: switch.bojler
-          - service: notify.mobile_app
-            data:
-              message: >
-                🟢 Grzanie WŁĄCZONE! 
-                Godzina: {{ current_time }}, 
-                Cena: {{ state_attr('sensor.pstryk_buy_price_table', 'best_prices') 
-                  | selectattr('start', 'match', '.* ' + current_time + ':\d+') 
-                  | map(attribute='price') 
-                  | first | round(2) }} PLN/kWh
-
+          - target:
+              entity_id: switch.shellypro3_34987a49142c_switch_2
+            action: switch.turn_on
+            data: {}
+          - data:
+              message: |
+                Grzanie włączone! Godzina: {{ current_hour }}, Cena: {{
+                  state_attr('sensor.pstryk_buy_price_table', 'best_prices')
+                  | selectattr('start', 'equalto', current_hour)
+                  | map(attribute='price')
+                  | first
+                }} PLN
+            action: notify.mobile_app_balg_iphone
       - conditions:
           - condition: state
-            entity_id: switch.bojler
+            entity_id: light.shellypro3_34987a49142c_switch_2
             state: "on"
         sequence:
-          - delay: "01:05:00"  # Wyłącz po 1 godzinie
-          - service: switch.turn_off
-            target:
-              entity_id: switch.bojler
+          - delay:
+              hours: 1
+              minutes: 5
+          - target:
+              entity_id: switch.shellypro3_34987a49142c_switch_2
+            action: switch.turn_off
+            data: {}
 
-mode: single
 ```
+
 Rozładowanie magazynu energii - Sprzedaż po najlepszej cenie
 
 ```yaml
