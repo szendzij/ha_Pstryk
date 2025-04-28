@@ -107,7 +107,7 @@ action:
             entity_id: switch.bojler
             state: "on"
         sequence:
-          - delay: "01:00:00"  # Wyłącz po 1 godzinie
+          - delay: "01:05:00"  # Wyłącz po 1 godzinie
           - service: switch.turn_off
             target:
               entity_id: switch.bojler
