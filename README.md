@@ -9,7 +9,7 @@ Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii 
 - 📅 Tabela 24h z prognozowanymi cenami
 - ⚙️ Konfigurowalna liczba "najlepszych godzin"
 - ⏰ Automatyczna konwersja czasu UTC → lokalny
-- 🔄 Aktualizacja co 1 minutę po pełnej godzinie
+- 🔄 Aktualizuje dane 1 minutę po pełnej godzinie
 - 🛡️ Debug i logowanie
 
 ## TODO
