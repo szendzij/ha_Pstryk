@@ -63,7 +63,7 @@ logo.png (opcjonalnie)
 Przykładowa Automatyzacja:
 
 Włączanie bojlera
-[Uploading update_coordinator.py…]()![IMG_4079](https://github.com/user-attachments/assets/ccdfd05c-3b38-4af5-a8db-36fe7fd645ee)
+[IMG_4079](https://github.com/user-attachments/assets/ccdfd05c-3b38-4af5-a8db-36fe7fd645ee)
 
 ```yaml
 alias: Optymalne grzanie wody
