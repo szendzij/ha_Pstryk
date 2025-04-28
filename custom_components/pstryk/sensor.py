@@ -61,18 +61,22 @@ class PstrykCurrentPriceSensor(SensorEntity):
         if self._unsub_update:
             self._unsub_update()
         
-        now = dt_util.utcnow()
-        next_update = (now + timedelta(hours=1)).replace(
-            minute=1, second=0, microsecond=0
+        now_local = dt_util.now()
+        next_midnight_local = (now_local + timedelta(days=1)).replace(
+            hour=0, minute=1, second=0, microsecond=0
+        )
+        next_midnight_utc = dt_util.as_utc(next_midnight_local)
+
+        self._unsub_update = async_track_point_in_time(
+            self.hass, 
+            self._async_update_task, 
+            next_midnight_utc
         )
         
-        self._unsub_update = async_track_point_in_time(
-            self.hass, self._async_update_task, next_update
-        )
         _LOGGER.debug(
-            "Następna aktualizacja %s zaplanowana na %s",
+            "Następna aktualizacja %s: %s (Twoja strefa)",
             self._price_type,
-            dt_util.as_local(next_update).strftime("%Y-%m-%d %H:%M:%S")
+            dt_util.as_local(next_midnight_utc).strftime("%Y-%m-%d %H:%M:%S")
         )
 
     async def _async_update_task(self, _):
@@ -84,10 +88,13 @@ class PstrykCurrentPriceSensor(SensorEntity):
 
     async def async_update(self, **kwargs):
         try:
-            today = dt_util.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-            window_end = today + timedelta(days=1)
+            today_local = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            window_end_local = today_local + timedelta(days=1)
+            today_utc = dt_util.as_utc(today_local)
+            window_end_utc = dt_util.as_utc(window_end_local)
+            
             endpoint = "pricing/" if self._price_type == "buy" else "prosumer-pricing/"
-            url = f"{API_URL}{endpoint}?resolution=hour&window_start={today.strftime('%Y-%m-%dT%H:%M:%SZ')}&window_end={window_end.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            url = f"{API_URL}{endpoint}?resolution=hour&window_start={today_utc.strftime('%Y-%m-%dT%H:%M:%SZ')}&window_end={window_end_utc.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
             async with aiohttp.ClientSession() as session:
                 response = await session.get(url, headers={"Authorization": self._api_key, "Accept": "application/json"})
@@ -105,10 +112,10 @@ class PstrykCurrentPriceSensor(SensorEntity):
                 self._state = current_price
                 self._available = current_price is not None
                 _LOGGER.debug(
-                    "Zaktualizowano %s: %s PLN (UTC: %s)",
+                    "Zaktualizowano %s: %s PLN (Twoja strefa: %s)",
                     self._price_type,
                     self._state,
-                    now.strftime("%Y-%m-%d %H:%M:%S")
+                    dt_util.as_local(now).strftime("%Y-%m-%d %H:%M:%S")
                 )
 
         except Exception as e:
@@ -153,13 +160,16 @@ class PstrykPriceTableSensor(SensorEntity):
         if self._unsub_update:
             self._unsub_update()
         
-        now = dt_util.utcnow()
-        next_update = (now + timedelta(hours=1)).replace(
-            minute=1, second=0, microsecond=0
+        now_local = dt_util.now()
+        next_midnight_local = (now_local + timedelta(days=1)).replace(
+            hour=0, minute=1, second=0, microsecond=0
         )
-        
+        next_midnight_utc = dt_util.as_utc(next_midnight_local)
+
         self._unsub_update = async_track_point_in_time(
-            self.hass, self._async_update_task, next_update
+            self.hass, 
+            self._async_update_task, 
+            next_midnight_utc
         )
 
     async def _async_update_task(self, _):
@@ -171,17 +181,22 @@ class PstrykPriceTableSensor(SensorEntity):
 
     def _convert_time(self, utc_str):
         try:
-            return dt_util.as_local(dt_util.parse_datetime(utc_str)).strftime("%H:%M")
+            dt_utc = dt_util.parse_datetime(utc_str)
+            dt_local = dt_util.as_local(dt_utc)
+            return dt_local.strftime("%Y-%m-%d %H:%M:%S")
         except Exception as e:
             _LOGGER.error("Błąd konwersji czasu: %s", str(e))
             return "N/A"
 
     async def async_update(self, **kwargs):
         try:
-            today = dt_util.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-            window_end = today + timedelta(days=1)
+            today_local = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            window_end_local = today_local + timedelta(days=1)
+            today_utc = dt_util.as_utc(today_local)
+            window_end_utc = dt_util.as_utc(window_end_local)
+            
             endpoint = "pricing/" if self._price_type == "buy" else "prosumer-pricing/"
-            url = f"{API_URL}{endpoint}?resolution=hour&window_start={today.strftime('%Y-%m-%dT%H:%M:%SZ')}&window_end={window_end.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            url = f"{API_URL}{endpoint}?resolution=hour&window_start={today_utc.strftime('%Y-%m-%dT%H:%M:%SZ')}&window_end={window_end_utc.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
             async with aiohttp.ClientSession() as session:
                 response = await session.get(url, headers={"Authorization": self._api_key, "Accept": "application/json"})
@@ -192,24 +207,23 @@ class PstrykPriceTableSensor(SensorEntity):
                     price = convert_price(frame.get("price_gross"))
                     if price is not None:
                         prices.append({
-                            "start_utc": frame["start"],
-                            "start_local": self._convert_time(frame["start"]),
+                            "start": self._convert_time(frame["start"]),
                             "price": price
                         })
 
                 sorted_prices = sorted(prices, key=lambda x: x["price"], reverse=(self._price_type == "sell"))
                 self._state = len(prices)
                 self._attributes = {
-                    "all_prices": prices,
-                    "best_prices": sorted_prices[:self._top_count],
+                    "all_prices": [{"start": p["start"], "price": p["price"]} for p in prices],
+                    "best_prices": [{"start": p["start"], "price": p["price"]} for p in sorted_prices[:self._top_count]],
                     "top_count": self._top_count,
-                    "last_updated": dt_util.utcnow().isoformat()
+                    "last_updated": dt_util.as_local(dt_util.utcnow()).isoformat()
                 }
                 self._available = True
                 _LOGGER.debug(
-                    "Zaktualizowano tabelę %s, liczba pozycji: %d",
+                    "Zaktualizowano tabelę %s (Twoja strefa: %s)",
                     self._price_type,
-                    len(prices)
+                    dt_util.as_local(dt_util.utcnow()).strftime("%Y-%m-%d %H:%M:%S")
                 )
 
         except Exception as e:
