@@ -1,3 +1,4 @@
+"""Data update coordinator for Pstryk Energy integration."""
 import logging
 from datetime import timedelta
 import aiohttp
@@ -10,6 +11,7 @@ from .const import API_URL, API_TIMEOUT, BUY_ENDPOINT, SELL_ENDPOINT, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 def convert_price(value):
+    """Convert price string to float."""
     try:
         return round(float(str(value).replace(",", ".").strip()), 2)
     except (ValueError, TypeError) as e:
@@ -17,8 +19,17 @@ def convert_price(value):
         return None
 
 class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
+    """Coordinator to fetch both current price and today's table."""
+    
+    def __del__(self):
+        """Properly clean up when object is deleted."""
+        if hasattr(self, '_unsub_hourly') and self._unsub_hourly:
+            self._unsub_hourly()
+        if hasattr(self, '_unsub_midnight') and self._unsub_midnight:
+            self._unsub_midnight()
+            
     def __init__(self, hass, api_key, price_type):
-        """Coordinator to fetch both current price and today's table."""
+        """Initialize the coordinator."""
         self.hass = hass
         self.api_key = api_key
         self.price_type = price_type
@@ -86,6 +97,8 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         """Schedule next refresh 1 min after each full hour."""
         if self._unsub_hourly:
             self._unsub_hourly()
+            self._unsub_hourly = None
+            
         now = dt_util.now()
         next_run = (now.replace(minute=0, second=0, microsecond=0)
                     + timedelta(hours=1, minutes=1))
@@ -94,6 +107,7 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _handle_hourly_update(self, _):
+        """Handle hourly update."""
         await self.async_request_refresh()
         self.schedule_hourly_update()
 
@@ -101,6 +115,8 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         """Schedule next refresh 1 min after local midnight."""
         if self._unsub_midnight:
             self._unsub_midnight()
+            self._unsub_midnight = None
+            
         now = dt_util.now()
         next_mid = (now + timedelta(days=1)).replace(hour=0, minute=1, second=0, microsecond=0)
         self._unsub_midnight = async_track_point_in_time(
@@ -108,5 +124,6 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _handle_midnight_update(self, _):
+        """Handle midnight update."""
         await self.async_request_refresh()
         self.schedule_midnight_update()
