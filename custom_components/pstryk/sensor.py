@@ -1,3 +1,4 @@
+"""Sensor platform for Pstryk Energy integration."""
 import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -19,16 +20,27 @@ async def async_setup_entry(
     buy_top = entry.options.get("buy_top", entry.data.get("buy_top", 5))
     sell_top = entry.options.get("sell_top", entry.data.get("sell_top", 5))
 
+    # Cleanup old coordinators if they exist
+    for price_type in ("buy", "sell"):
+        key = f"{entry.entry_id}_{price_type}"
+        coordinator = hass.data[DOMAIN].get(key)
+        if coordinator:
+            # Cancel scheduled updates
+            if hasattr(coordinator, '_unsub_hourly') and coordinator._unsub_hourly:
+                coordinator._unsub_hourly()
+            if hasattr(coordinator, '_unsub_midnight') and coordinator._unsub_midnight:
+                coordinator._unsub_midnight()
+            # Remove from hass data
+            hass.data[DOMAIN].pop(key, None)
+
     entities = []
     for price_type in ("buy", "sell"):
         key = f"{entry.entry_id}_{price_type}"
-        coordinator: PstrykDataUpdateCoordinator = hass.data[DOMAIN].get(key)
-        if not coordinator:
-            coordinator = PstrykDataUpdateCoordinator(hass, api_key, price_type)
-            await coordinator.async_config_entry_first_refresh()
-            coordinator.schedule_hourly_update()
-            coordinator.schedule_midnight_update()
-            hass.data[DOMAIN][key] = coordinator
+        coordinator = PstrykDataUpdateCoordinator(hass, api_key, price_type)
+        await coordinator.async_config_entry_first_refresh()
+        coordinator.schedule_hourly_update()
+        coordinator.schedule_midnight_update()
+        hass.data[DOMAIN][key] = coordinator
 
         entities.append(PstrykCurrentPriceSensor(coordinator, price_type))
         top = buy_top if price_type == "buy" else sell_top
