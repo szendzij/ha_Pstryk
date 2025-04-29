@@ -50,6 +50,7 @@ logo.png (opcjonalnie)
 ![{33C89696-2E29-43FF-945F-13B8D14727E4}](https://github.com/user-attachments/assets/231a25fa-c66d-4240-a49a-2ec824985ab2)
 ![{6613F04E-4045-45A8-A28A-7BA1B8B4AD63}](https://github.com/user-attachments/assets/3edc2ad0-cdd1-46b0-aa58-27ea94bfdd26)
 ![{C248C3EA-C159-409E-AA40-B9863D7A8311}](https://github.com/user-attachments/assets/48e41d6b-04ae-4f67-b704-7c046646ba11)
+![{1331E133-5131-49C9-9DEE-81AA02353DC6}](https://github.com/user-attachments/assets/674cbb14-bf79-4091-a6bf-1a27fc379787)
 
 
 ## Użycie
