@@ -1,6 +1,6 @@
 # Integracja Home Assistant z Pstryk API
 
-[![Wersja](https://img.shields.io/badge/wersja-1.2.3-blue)](https://github.com/balgerion/ha_Pstryk/)
+[![Wersja](https://img.shields.io/badge/wersja-1.3.0-blue)](https://github.com/balgerion/ha_Pstryk/)
 
 Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii elektrycznej oraz prognoz z platformy Pstryk.
 
