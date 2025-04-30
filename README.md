@@ -12,9 +12,11 @@ Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii 
 - 🔄 Aktualizuje dane 1 minutę po pełnej godzinie
 - 🛡️ Debug i logowanie
 - 🧩 Konfiguracja z poziomu integracji
+- 🔑 Walidacja klucza API
 
 ## TODO
-- Walidacja kluacza API
+- 🔻 Dodanie "najgorszych godzin" do tabeli
+- 🕒 Dodanie sensora "Następna cena"
 
 ## Instalacja
 
