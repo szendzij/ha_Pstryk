@@ -1,7 +1,12 @@
 """Config flow for Pstryk Energy integration."""
 from homeassistant import config_entries
 import voluptuous as vol
-from .const import DOMAIN
+import aiohttp
+import asyncio
+import async_timeout
+from datetime import timedelta
+from homeassistant.util import dt as dt_util
+from .const import DOMAIN, API_URL, API_TIMEOUT
 
 class PstrykConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Pstryk Energy."""
@@ -11,10 +16,17 @@ class PstrykConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            return self.async_create_entry(
-                title="Pstryk Energy", 
-                data=user_input
-            )
+            # Sprawdź poprawność API key
+            api_key = user_input["api_key"]
+            valid = await self._validate_api_key(api_key)
+            
+            if valid:
+                return self.async_create_entry(
+                    title="Pstryk Energy", 
+                    data=user_input
+                )
+            else:
+                errors["api_key"] = "invalid_api_key"
 
         return self.async_show_form(
             step_id="user",
@@ -25,6 +37,27 @@ class PstrykConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }),
             errors=errors
         )
+    
+    async def _validate_api_key(self, api_key):
+        """Validate API key by calling a simple API endpoint."""
+        # Używamy endpointu buy z krótkim oknem czasowym dla szybkiego sprawdzenia
+        now = dt_util.utcnow()
+        start_utc = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end_utc = (now + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        endpoint = f"pricing/?resolution=hour&window_start={start_utc}&window_end={end_utc}"
+        url = f"{API_URL}{endpoint}"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with async_timeout.timeout(API_TIMEOUT):
+                    resp = await session.get(
+                        url,
+                        headers={"Authorization": api_key, "Accept": "application/json"}
+                    )
+                    return resp.status == 200
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return False
     
     @staticmethod
     def async_get_options_flow(config_entry):
