@@ -11,6 +11,50 @@ from .const import API_URL, API_TIMEOUT, BUY_ENDPOINT, SELL_ENDPOINT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+class ExponentialBackoffRetry:
+    """Implementacja wykładniczego opóźnienia przy ponawianiu prób."""
+
+    def __init__(self, max_retries=3, base_delay=2.0):
+        """Inicjalizacja mechanizmu ponowień.
+        
+        Args:
+            max_retries: Maksymalna liczba prób
+            base_delay: Podstawowe opóźnienie w sekundach (zwiększane wykładniczo)
+        """
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+        
+    async def execute(self, func, *args, **kwargs):
+        """Wykonaj funkcję z ponawianiem prób.
+        
+        Args:
+            func: Funkcja asynchroniczna do wykonania
+            args, kwargs: Argumenty funkcji
+            
+        Returns:
+            Wynik funkcji
+            
+        Raises:
+            UpdateFailed: Po wyczerpaniu wszystkich prób
+        """
+        last_exception = None
+        for retry in range(self.max_retries):
+            try:
+                return await func(*args, **kwargs)
+            except Exception as err:
+                last_exception = err
+                # Nie czekamy po ostatniej próbie
+                if retry < self.max_retries - 1:
+                    delay = self.base_delay * (2 ** retry)
+                    _LOGGER.debug(
+                        "Retry %d/%d after error: %s (delay: %.1fs)",
+                        retry + 1, self.max_retries, str(err), delay,
+                    )
+                    await asyncio.sleep(delay)
+        
+        # Jeśli wszystkie próby zawiodły
+        raise last_exception
+
 def convert_price(value):
     """Convert price string to float."""
     try:
@@ -36,6 +80,7 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         self.price_type = price_type
         self._unsub_hourly = None
         self._unsub_midnight = None
+        self.retry_mechanism = ExponentialBackoffRetry()
         
         # Set a default update interval as a fallback (1 hour)
         # This ensures data is refreshed even if scheduled updates fail
@@ -47,6 +92,35 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
             name=f"{DOMAIN}_{price_type}",
             update_interval=update_interval,  # Add fallback interval
         )
+
+    async def _make_api_request(self, url):
+        """Make API request with proper error handling."""
+        async with aiohttp.ClientSession() as session:
+            async with async_timeout.timeout(API_TIMEOUT):
+                resp = await session.get(
+                    url,
+                    headers={"Authorization": self.api_key, "Accept": "application/json"}
+                )
+                
+                # Obsługa różnych kodów błędu
+                if resp.status == 401:
+                    _LOGGER.error("API authentication failed for %s - invalid API key", self.price_type)
+                    raise UpdateFailed("API authentication failed - invalid API key")
+                elif resp.status == 403:
+                    _LOGGER.error("API access forbidden for %s - permissions issue", self.price_type)
+                    raise UpdateFailed("API access forbidden - check permissions")
+                elif resp.status == 404:
+                    _LOGGER.error("API endpoint not found for %s - check URL", self.price_type)
+                    raise UpdateFailed("API endpoint not found")
+                elif resp.status == 429:
+                    _LOGGER.error("API rate limit exceeded for %s", self.price_type)
+                    raise UpdateFailed("API rate limit exceeded - try again later")
+                elif resp.status != 200:
+                    error_text = await resp.text()
+                    _LOGGER.error("API error %s for %s: %s", resp.status, self.price_type, error_text)
+                    raise UpdateFailed(f"API error {resp.status}: {error_text[:100]}")
+                
+                return await resp.json()
 
     async def _async_update_data(self):
         """Fetch 48h of frames and extract current + today's list."""
@@ -63,21 +137,12 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Requesting %s data from %s", self.price_type, url)
 
         try:
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with async_timeout.timeout(API_TIMEOUT):
-                        resp = await session.get(
-                            url,
-                            headers={"Authorization": self.api_key, "Accept": "application/json"}
-                        )
-                        if resp.status != 200:
-                            error_text = await resp.text()
-                            _LOGGER.error("API error %s for %s: %s", resp.status, self.price_type, error_text)
-                            raise UpdateFailed(f"API error {resp.status}: {error_text[:100]}")
-                        data = await resp.json()
-                except asyncio.TimeoutError:
-                    _LOGGER.error("Timeout fetching %s data from API", self.price_type)
-                    raise UpdateFailed(f"API timeout after {API_TIMEOUT} seconds")
+            # Użyj mechanizmu ponowień
+            try:
+                data = await self.retry_mechanism.execute(self._make_api_request, url)
+            except asyncio.TimeoutError:
+                _LOGGER.error("Timeout fetching %s data from API", self.price_type)
+                raise UpdateFailed(f"API timeout after {API_TIMEOUT} seconds")
 
             frames = data.get("frames", [])
             if not frames:
@@ -93,6 +158,12 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
                     continue
                 start = dt_util.parse_datetime(f["start"])
                 end = dt_util.parse_datetime(f["end"])
+                
+                # Weryfikacja poprawności dat
+                if not start or not end:
+                    _LOGGER.warning("Invalid datetime format in frames for %s", self.price_type)
+                    continue
+                    
                 local_start = dt_util.as_local(start).strftime("%Y-%m-%dT%H:%M:%S")
                 prices.append({"start": local_start, "price": val})
                 if start <= now_utc < end:
