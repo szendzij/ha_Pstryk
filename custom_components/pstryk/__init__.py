@@ -23,17 +23,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("Pstryk entry setup: %s", entry.entry_id)
     return True
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload sensor platform and clear data."""
-    # First cancel coordinators' scheduled updates
+async def _cleanup_coordinators(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean up coordinators and cancel scheduled tasks."""
     for price_type in ("buy", "sell"):
         key = f"{entry.entry_id}_{price_type}"
         coordinator = hass.data[DOMAIN].get(key)
         if coordinator:
+            _LOGGER.debug("Cleaning up %s coordinator for entry %s", price_type, entry.entry_id)
+            # Cancel scheduled updates
             if hasattr(coordinator, '_unsub_hourly') and coordinator._unsub_hourly:
                 coordinator._unsub_hourly()
+                coordinator._unsub_hourly = None
             if hasattr(coordinator, '_unsub_midnight') and coordinator._unsub_midnight:
                 coordinator._unsub_midnight()
+                coordinator._unsub_midnight = None
+            # Remove from hass data
+            hass.data[DOMAIN].pop(key, None)
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload sensor platform and clear data."""
+    # First cancel coordinators' scheduled updates
+    await _cleanup_coordinators(hass, entry)
     
     # Then unload the platform
     unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
@@ -43,7 +53,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if entry.entry_id in hass.data[DOMAIN]:
             hass.data[DOMAIN].pop(entry.entry_id)
             
-        # Clean up any coordinators
+        # Clean up any remaining components
         for key in list(hass.data[DOMAIN].keys()):
             if key.startswith(f"{entry.entry_id}_"):
                 hass.data[DOMAIN].pop(key, None)
