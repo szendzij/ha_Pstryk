@@ -1,6 +1,6 @@
 DOMAIN = "pstryk"
 API_URL = "https://api.pstryk.pl/integrations/"
-API_TIMEOUT = 10
+API_TIMEOUT = 30
 
 BUY_ENDPOINT = "pricing/?resolution=hour&window_start={start}&window_end={end}"
 SELL_ENDPOINT = "prosumer-pricing/?resolution=hour&window_start={start}&window_end={end}"
