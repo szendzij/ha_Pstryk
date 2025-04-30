@@ -1,6 +1,7 @@
 """Data update coordinator for Pstryk Energy integration."""
 import logging
 from datetime import timedelta
+import asyncio
 import aiohttp
 import async_timeout
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -35,16 +36,21 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
         self.price_type = price_type
         self._unsub_hourly = None
         self._unsub_midnight = None
+        
+        # Set a default update interval as a fallback (1 hour)
+        # This ensures data is refreshed even if scheduled updates fail
+        update_interval = timedelta(hours=1)
 
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{price_type}",
-            update_interval=None,  # we'll schedule manually
+            update_interval=update_interval,  # Add fallback interval
         )
 
     async def _async_update_data(self):
         """Fetch 48h of frames and extract current + today's list."""
+        _LOGGER.debug("Starting %s price update", self.price_type)
         today_local = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
         window_end_local = today_local + timedelta(days=2)
         start_utc = dt_util.as_utc(today_local).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -52,19 +58,31 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
 
         endpoint_tpl = BUY_ENDPOINT if self.price_type == "buy" else SELL_ENDPOINT
         endpoint = endpoint_tpl.format(start=start_utc, end=end_utc)
+        url = f"{API_URL}{endpoint}"
+        
+        _LOGGER.debug("Requesting %s data from %s", self.price_type, url)
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with async_timeout.timeout(API_TIMEOUT):
-                    resp = await session.get(
-                        f"{API_URL}{endpoint}",
-                        headers={"Authorization": self.api_key, "Accept": "application/json"}
-                    )
-                    if resp.status != 200:
-                        raise UpdateFailed(f"API error {resp.status}")
-                    data = await resp.json()
+                try:
+                    async with async_timeout.timeout(API_TIMEOUT):
+                        resp = await session.get(
+                            url,
+                            headers={"Authorization": self.api_key, "Accept": "application/json"}
+                        )
+                        if resp.status != 200:
+                            error_text = await resp.text()
+                            _LOGGER.error("API error %s for %s: %s", resp.status, self.price_type, error_text)
+                            raise UpdateFailed(f"API error {resp.status}: {error_text[:100]}")
+                        data = await resp.json()
+                except asyncio.TimeoutError:
+                    _LOGGER.error("Timeout fetching %s data from API", self.price_type)
+                    raise UpdateFailed(f"API timeout after {API_TIMEOUT} seconds")
 
             frames = data.get("frames", [])
+            if not frames:
+                _LOGGER.warning("No frames returned for %s prices", self.price_type)
+                
             now_utc = dt_util.utcnow()
             prices = []
             current_price = None
@@ -83,6 +101,9 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
             # only today's entries
             today_str = today_local.strftime("%Y-%m-%d")
             prices_today = [p for p in prices if p["start"].startswith(today_str)]
+            
+            _LOGGER.debug("Successfully fetched %s price data: current=%s, today_prices=%d", 
+                         self.price_type, current_price, len(prices_today))
 
             return {
                 "prices_today": prices_today,
@@ -90,8 +111,12 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
                 "current": current_price,
             }
 
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Network error fetching %s data: %s", self.price_type, str(err))
+            raise UpdateFailed(f"Network error: {err}")
         except Exception as err:
-            raise UpdateFailed(err)
+            _LOGGER.exception("Unexpected error fetching %s data: %s", self.price_type, str(err))
+            raise UpdateFailed(f"Error: {err}")
 
     def schedule_hourly_update(self):
         """Schedule next refresh 1 min after each full hour."""
@@ -100,14 +125,20 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
             self._unsub_hourly = None
             
         now = dt_util.now()
+        # Keep original timing: 1 minute past the hour
         next_run = (now.replace(minute=0, second=0, microsecond=0)
                     + timedelta(hours=1, minutes=1))
+        
+        _LOGGER.debug("Scheduling next hourly update for %s at %s", 
+                     self.price_type, next_run.isoformat())
+                     
         self._unsub_hourly = async_track_point_in_time(
             self.hass, self._handle_hourly_update, dt_util.as_utc(next_run)
         )
 
     async def _handle_hourly_update(self, _):
         """Handle hourly update."""
+        _LOGGER.debug("Running scheduled hourly update for %s", self.price_type)
         await self.async_request_refresh()
         self.schedule_hourly_update()
 
@@ -118,12 +149,18 @@ class PstrykDataUpdateCoordinator(DataUpdateCoordinator):
             self._unsub_midnight = None
             
         now = dt_util.now()
+        # Keep original timing: 1 minute past midnight
         next_mid = (now + timedelta(days=1)).replace(hour=0, minute=1, second=0, microsecond=0)
+        
+        _LOGGER.debug("Scheduling next midnight update for %s at %s", 
+                     self.price_type, next_mid.isoformat())
+                     
         self._unsub_midnight = async_track_point_in_time(
             self.hass, self._handle_midnight_update, dt_util.as_utc(next_mid)
         )
 
     async def _handle_midnight_update(self, _):
         """Handle midnight update."""
+        _LOGGER.debug("Running scheduled midnight update for %s", self.price_type)
         await self.async_request_refresh()
         self.schedule_midnight_update()
