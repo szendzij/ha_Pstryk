@@ -1,0 +1,29 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pstryk Energy",
+        "description": "Konfiguracja integracji cen energii Pstryk",
+        "data": {
+          "api_key": "Klucz API",
+          "buy_top": "Liczba najlepszych cen zakupu",
+          "sell_top": "Liczba najlepszych cen sprzedaży"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Nieprawidłowy klucz API"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcje Pstryk Energy",
+        "data": {
+          "buy_top": "Liczba najlepszych cen zakupu",
+          "sell_top": "Liczba najlepszych cen sprzedaży"
+        }
+      }
+    }
+  }
+}
