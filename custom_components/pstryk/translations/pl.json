@@ -25,5 +25,18 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "next_hour": "Następna godzina"
+    }
+  },
+  "debug": {
+    "looking_for_next_hour": "Szukam ceny dla następnej godziny: {next_hour}",
+    "looking_for_next_day": "Szukam ceny dla następnego dnia w pełnej liście cen (48h)",
+    "error_processing_date": "Błąd podczas przetwarzania daty: {error}",
+    "error_processing_full_list": "Błąd podczas przetwarzania daty dla pełnej listy: {error}",
+    "no_price_midnight": "Nie znaleziono ceny dla północy następnego dnia. Dane prawdopodobnie jeszcze nie załadowane.",
+    "no_price_next_hour": "Nie znaleziono ceny dla następnej godziny: {next_hour}"
   }
 }
