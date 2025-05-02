@@ -25,5 +25,18 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "next_hour": "Next hour"
+    }
+  },
+  "debug": {
+    "looking_for_next_hour": "Looking for price for next hour: {next_hour}",
+    "looking_for_next_day": "Looking for next day price in full price list (48h)",
+    "error_processing_date": "Error processing date: {error}",
+    "error_processing_full_list": "Error processing date for full list: {error}",
+    "no_price_midnight": "No price found for next day midnight. Data probably not loaded yet.",
+    "no_price_next_hour": "No price found for next hour: {next_hour}"
   }
 }
