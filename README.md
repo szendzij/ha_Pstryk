@@ -82,7 +82,7 @@ conditions:
       {% set current_hour = now().replace(minute=0, second=0,
       microsecond=0).isoformat(timespec='seconds').split('+')[0] %}
 
-      {% set best_hours = state_attr('sensor.pstryk_buy_price_table',
+      {% set best_hours = state_attr('sensor.pstryk_current_buy_price',
       'best_prices') | map(attribute='start') | list %}
 
       {{ current_hour in best_hours }}
@@ -104,7 +104,7 @@ actions:
           - data:
               message: |
                 Grzanie włączone! Godzina: {{ current_hour }}, Cena: {{
-                  state_attr('sensor.pstryk_buy_price_table', 'best_prices')
+                  state_attr('sensor.pstryk_current_buy_price', 'best_prices')
                   | selectattr('start', 'equalto', current_hour)
                   | map(attribute='price')
                   | first
@@ -122,6 +122,7 @@ actions:
               entity_id: switch.shellypro3_34987a49142c_switch_2
             action: switch.turn_off
             data: {}
+
 
 ```
 
