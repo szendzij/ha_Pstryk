@@ -1,6 +1,6 @@
 # Integracja Home Assistant z Pstryk API
 
-[![Wersja](https://img.shields.io/badge/wersja-1.3.0-blue)](https://github.com/balgerion/ha_Pstryk/)
+[![Wersja](https://img.shields.io/badge/wersja-1.3.1-blue)](https://github.com/balgerion/ha_Pstryk/)
 
 Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii elektrycznej oraz prognoz z platformy Pstryk.
 
@@ -8,6 +8,7 @@ Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii 
 - 🔌 Aktualna cena kupna i sprzedaży energii
 - 📅 Tabela 24h z prognozowanymi cenami
 - ⚙️ Konfigurowalna liczba "najlepszych godzin"
+- 🕒 Cena w następnej godzinie 
 - ⏰ Automatyczna konwersja czasu UTC → lokalny
 - 🔄 Dane są aktualizowane minutę po pełnej godzinie
 - 🛡️ Debug i logowanie
@@ -16,7 +17,6 @@ Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii 
 
 ## TODO
 - 🔻 Dodanie "najgorszych godzin" do tabeli
-- 🕒 Dodanie sensora "Następna cena"
 
 ## Instalacja
 
@@ -49,20 +49,20 @@ logo.png (opcjonalnie)
 
 ## Scrnshoty
 
-![{33C89696-2E29-43FF-945F-13B8D14727E4}](https://github.com/user-attachments/assets/231a25fa-c66d-4240-a49a-2ec824985ab2)
-![{6613F04E-4045-45A8-A28A-7BA1B8B4AD63}](https://github.com/user-attachments/assets/3edc2ad0-cdd1-46b0-aa58-27ea94bfdd26)
-![{C248C3EA-C159-409E-AA40-B9863D7A8311}](https://github.com/user-attachments/assets/48e41d6b-04ae-4f67-b704-7c046646ba11)
-![{1331E133-5131-49C9-9DEE-81AA02353DC6}](https://github.com/user-attachments/assets/674cbb14-bf79-4091-a6bf-1a27fc379787)
+![{5787179E-9AE8-415F-9D93-2884EF544768}](https://github.com/user-attachments/assets/3fdea007-8c43-40a0-a188-455dca9b805a)
+![{34821286-F16C-496F-B87A-D2B534190B42}](https://github.com/user-attachments/assets/9fe65b19-dd5b-4d4f-bf0e-6980e41fb1f0)
+![{CF93284B-2363-4494-A2CC-D10D1690B0D5}](https://github.com/user-attachments/assets/0665485a-3487-4b7f-9785-10846bbf3733)
+![{0BAA4A9C-287B-4162-9AA1-31A1A6111BAB}](https://github.com/user-attachments/assets/6af25e58-3c7e-48ee-8b64-bbe0d3856167)
+
 
 
 ## Użycie
 ### Dostępne encje
 | Nazwa encji                          | Opis                          |
 |--------------------------------------|-------------------------------|
-| `sensor.pstryk_current_buy_price`    | Aktualna cena kupna           |
-| `sensor.pstryk_current_sell_price`   | Aktualna cena sprzedaży       |
-| `sensor.pstryk_buy_price_table`      | Tabela cen kupna              |
-| `sensor.pstryk_sell_price_table`     | Tabela cen sprzedaży          |
+| `sensor.pstryk_current_buy_price`    | Aktualna cena kupna + tabela           |
+| `sensor.pstryk_current_sell_price`   | Aktualna cena sprzedaży   + tabela     |
+
 
 Przykładowa Automatyzacja:
 
