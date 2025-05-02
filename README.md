@@ -43,7 +43,7 @@ logo.png (opcjonalnie)
 2. Kliknij `Dodaj integrację`
 3. Wyszukaj "Psrryk Energy"
 4. Wprowadź dane:
-- **Klucz API**: Twój klucz z platformy PSTryk
+- **Klucz API**: Twój klucz z platformy Pstryk
 - **Liczba najlepszych cen kupna**: (domyślnie 5)
 - **Liczba najlepszych cen sprzedaży**: (domyślnie 5)
 
