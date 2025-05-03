@@ -2,7 +2,7 @@
 
 [![Wersja](https://img.shields.io/badge/wersja-1.3.1-blue)](https://github.com/balgerion/ha_Pstryk/)
 
-Integracja dla Home Assistant umożliwiająca śledzenie aktualnych cen energii elektrycznej oraz prognoz z platformy Pstryk.
+Integracja dla Home Assistant  umożliwiająca śledzenie aktualnych cen energii elektrycznej oraz prognoz z platformy Pstryk.
 
 ## Funkcje
 - 🔌 Aktualna cena kupna i sprzedaży energii
