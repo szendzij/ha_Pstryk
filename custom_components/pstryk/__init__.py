@@ -11,10 +11,24 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Store API key and forward to sensor platform."""
-    hass.data[DOMAIN].setdefault(entry.entry_id, {})["api_key"] = entry.data.get("api_key")
-    
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities,
+) -> None:
+    """Set up the Pstryk sensors via the coordinator."""
+    api_key = hass.data[DOMAIN][entry.entry_id]["api_key"]
+
+    entities = []
+    for price_type in ("buy", "sell"):
+        coordinator = PstrykDataUpdateCoordinator(hass, api_key, price_type)
+        await coordinator.async_config_entry_first_refresh()
+        entities.append(PstrykPriceSensor(coordinator, price_type))
+        if price_type == "buy":  # Add energy usage sensor only once
+            entities.append(PstrykEnergyUsageSensor(coordinator))
+
+    async_add_entities(entities)
+
     # Register update listener for option changes - only if not already registered
     if not entry.update_listeners:
         entry.async_on_unload(entry.add_update_listener(async_reload_entry))
